@@ -17,7 +17,7 @@ The POST /reviews endpoint accepts an authenticated user's request but doesn't v
 
 ## Week 8 — Reproduction & solution planning
 
-**Reproduction commit link:** https://github.com/ascherj/pathreview/commit/6171fe1
+**Reproduction commit link:** https://github.com/AdetayoKalejaiye/pathreview/commit/6171fe1
 
 **Reproduction summary:**
 Added test `test_create_review_missing_ownership_check()` documenting the vulnerability: `create_review()` service accepts any `profile_id` without verifying it belongs to the current user. Unlike `get_review()` and `list_reviews()` which join with Profile and filter by user ownership, `create_review()` has no ownership check.
