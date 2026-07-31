@@ -338,3 +338,32 @@ class TestReviewService:
 
         # Should order by created_at descending
         mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_review_missing_ownership_check(self, mock_db_session):
+        """VULNERABILITY: create_review does not verify profile belongs to user.
+
+        Issue #163: An attacker can create reviews on any profile by supplying
+        another user's profile_id. Unlike get_review() and list_reviews() which
+        join with Profile and filter by Profile.user_id, create_review() accepts
+        any profile_id without ownership verification.
+
+        This test documents that profile ownership should be checked before
+        allowing review creation.
+        """
+        attacker_user_id = uuid4()
+        victim_profile_id = uuid4()
+
+        with patch('core.services.review_service.Review') as MockReview:
+            mock_instance = MockReview.return_value
+            mock_instance.id = uuid4()
+            mock_db_session.add = Mock()
+            mock_db_session.commit = AsyncMock()
+            mock_db_session.refresh = AsyncMock()
+
+            # Attacker can create review on any profile without ownership check
+            result = await create_review(mock_db_session, victim_profile_id, attacker_user_id)
+
+            # Currently succeeds because create_review doesn't verify profile ownership
+            assert result is not None
+            # After fix: should be None or raise exception if profile doesn't belong to user
