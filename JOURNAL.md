@@ -29,3 +29,27 @@ Added test `test_create_review_missing_ownership_check()` documenting the vulner
 **Blockers or open questions:**
 - Clarify if non-existent profile should return 403 or 404
 - Check if background task `process_review()` needs ownership verification too
+
+## Week 9 — Solution building & PR submission
+
+### Check-in 1 (mid-week)
+
+**Current progress:**
+- ✅ Sub-task 1: Added ownership verification to `create_review()` service function
+  - Queries Profile by id and verifies `profile.user_id == user_id`
+  - Returns None if ownership check fails
+- ✅ Sub-task 2: Updated `create_review_endpoint()` to handle ownership verification
+  - Checks if `create_review()` returns None
+  - Raises HTTPException with 403 Forbidden status code
+- ✅ Sub-task 3 (partial): Added comprehensive tests
+  - `test_create_review_rejects_wrong_owner`: Verifies ownership check blocks attacker
+  - `test_create_review_allows_owner`: Verifies owner can create reviews
+  - `test_create_review_returns_none_for_nonexistent_profile`: Verifies non-existent profile handling
+
+**Next steps:**
+- Run make check and make test-unit to verify all tests pass
+- Get peer/mentor feedback on draft PR
+- Finalize PR and submit
+
+**Blockers:**
+None - implementation on track
