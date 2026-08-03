@@ -340,19 +340,45 @@ class TestReviewService:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_create_review_missing_ownership_check(self, mock_db_session):
-        """VULNERABILITY: create_review does not verify profile belongs to user.
+    async def test_create_review_rejects_wrong_owner(self, mock_db_session):
+        """Test create_review rejects profile that doesn't belong to user.
 
-        Issue #163: An attacker can create reviews on any profile by supplying
-        another user's profile_id. Unlike get_review() and list_reviews() which
-        join with Profile and filter by Profile.user_id, create_review() accepts
-        any profile_id without ownership verification.
-
-        This test documents that profile ownership should be checked before
-        allowing review creation.
+        Issue #163: create_review should verify profile ownership before creation.
+        If profile_id doesn't belong to user_id, return None.
         """
         attacker_user_id = uuid4()
+        victim_user_id = uuid4()
         victim_profile_id = uuid4()
+
+        # Mock Profile query to return a profile owned by a different user
+        mock_profile = Mock()
+        mock_profile.id = victim_profile_id
+        mock_profile.user_id = victim_user_id  # Different from attacker_user_id
+
+        mock_result = AsyncMock()
+        mock_result.scalars.return_value.first.return_value = mock_profile
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+        # Attacker attempts to create review on victim's profile
+        result = await create_review(mock_db_session, victim_profile_id, attacker_user_id)
+
+        # Should return None (ownership verification failed)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_create_review_allows_owner(self, mock_db_session):
+        """Test create_review allows profile owner to create reviews."""
+        user_id = uuid4()
+        profile_id = uuid4()
+
+        # Mock Profile query to return a profile owned by the user
+        mock_profile = Mock()
+        mock_profile.id = profile_id
+        mock_profile.user_id = user_id
+
+        mock_result = AsyncMock()
+        mock_result.scalars.return_value.first.return_value = mock_profile
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         with patch('core.services.review_service.Review') as MockReview:
             mock_instance = MockReview.return_value
@@ -361,9 +387,23 @@ class TestReviewService:
             mock_db_session.commit = AsyncMock()
             mock_db_session.refresh = AsyncMock()
 
-            # Attacker can create review on any profile without ownership check
-            result = await create_review(mock_db_session, victim_profile_id, attacker_user_id)
+            result = await create_review(mock_db_session, profile_id, user_id)
 
-            # Currently succeeds because create_review doesn't verify profile ownership
+            # Should succeed because ownership verified
             assert result is not None
-            # After fix: should be None or raise exception if profile doesn't belong to user
+
+    @pytest.mark.asyncio
+    async def test_create_review_returns_none_for_nonexistent_profile(self, mock_db_session):
+        """Test create_review returns None if profile doesn't exist."""
+        user_id = uuid4()
+        nonexistent_profile_id = uuid4()
+
+        # Mock Profile query to return None (profile not found)
+        mock_result = AsyncMock()
+        mock_result.scalars.return_value.first.return_value = None
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+        result = await create_review(mock_db_session, nonexistent_profile_id, user_id)
+
+        # Should return None (profile not found)
+        assert result is None
