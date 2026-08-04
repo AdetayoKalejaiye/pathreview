@@ -53,3 +53,26 @@ Added test `test_create_review_missing_ownership_check()` documenting the vulner
 
 **Blockers:**
 None - implementation on track
+
+---
+
+### Check-in 2 (end of week)
+
+**PR link:** https://github.com/ascherj/pathreview/pull/703
+
+**Branch:** fix/163-review-profile-ownership
+
+**What you built:**
+Added profile ownership verification to the review creation endpoint (issue #163). The `create_review()` service now queries the Profile table to verify the profile belongs to the requesting user before creating a review. If ownership verification fails, the endpoint returns 403 Forbidden, preventing unauthorized users from creating reviews on other users' profiles.
+
+**Tests added or updated:**
+Updated `tests/unit/test_review_service.py` with three new tests:
+- `test_create_review_rejects_wrong_owner`: Verifies attacker cannot create reviews on others' profiles
+- `test_create_review_allows_owner`: Verifies owner can successfully create reviews on their profile
+- `test_create_review_returns_none_for_nonexistent_profile`: Verifies proper handling of non-existent profiles
+
+**Self-review confirmation:** 
+- [ ] make check passes
+- [ ] make test-unit passes
+
+**Draft PR feedback received from:** None (PR opened as draft for early feedback)
